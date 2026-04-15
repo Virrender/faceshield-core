@@ -2,7 +2,7 @@
 
 An end-to-end computer vision platform that applies adversarial perturbations (cloaking) to images, protecting user privacy from unauthorized facial recognition models-- FaceNet.
 
-## 🏗️ System Architecture 
+System Architecture 
 This project utilizes a microservices architecture to cleanly separate the machine learning engine from the web serving layers:
 
 * **`/faceshield` (Core ML Engine):** The raw machine learning pipeline responsible for generating the adversarial cloaking perturbations.
