@@ -1,0 +1,27 @@
+# FaceShield Phase 1 — pinned dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Core ML framework ──────────────────────────────────────────────────────
+# PyTorch 2.0+ required for antialias=True in F.interpolate
+torch>=2.0.0
+torchvision>=0.15.0
+
+# ── Face detection + Phase 1 surrogate model (FaceNet) ────────────────────
+facenet-pytorch==2.5.3
+
+# ── Differentiable SSIM — used in Module 5 attack loop ───────────────────
+# CRITICAL: This must be installed. Module 5 will crash without it.
+pytorch-msssim==1.0.0
+
+# ── Image quality metrics — used in Module 6 evaluation ──────────────────
+# CRITICAL: Module 6 uses skimage.metrics. Without this, evaluation crashes.
+scikit-image>=0.21.0
+
+# ── Image processing ───────────────────────────────────────────────────────
+Pillow>=9.5.0
+numpy>=1.24.0
+
+# ── Phase 2 additions (uncomment when building ArcFace backend) ────────────
+# onnxruntime-gpu>=1.16.0
+# onnx2torch>=1.5.0
+# insightface>=0.7.3

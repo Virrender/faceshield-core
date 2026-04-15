@@ -1,0 +1,11 @@
+# Node modules (The most important one!)
+node_modules/
+
+# Production builds
+build/
+dist/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

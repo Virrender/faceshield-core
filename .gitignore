@@ -1,0 +1,35 @@
+# =========================
+# 1. SECRETS (NEVER UPLOAD)
+# =========================
+.env
+*.env
+
+# =========================
+# 2. NODE & REACT (web-app)
+# =========================
+node_modules/
+build/
+dist/
+npm-debug.log*
+
+# =========================
+# 3. PYTHON & ML (faceshield & python-service)
+# =========================
+__pycache__/
+venv/
+env/
+.pytest_cache/
+*.py[cod]
+
+# Heavy Machine Learning Weights
+*.pt
+*.pth
+*.h5
+*.onnx
+
+# =========================
+# 4. OS & EDITOR JUNK
+# =========================
+.vscode/
+.DS_Store
+Thumbs.db

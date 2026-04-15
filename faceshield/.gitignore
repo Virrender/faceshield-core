@@ -1,0 +1,73 @@
+# ── Python ────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+
+# Virtual environments — never push these
+venv/
+env/
+.env/
+.venv/
+ENV/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# ML model weights and large files — download on demand, never commit
+*.h5
+*.pt
+*.pth
+*.onnx
+*.pkl
+*.bin
+
+# Test outputs — generated files, not source code
+faceshield/outputs/
+python-service/outputs/
+*.png
+*.jpg
+*.jpeg
+!faceshield/inputs/img.jpg
+
+# ── Node.js ───────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+web-app/client/dist/
+web-app/client/build/
+web-app/server/dist/
+
+# ── Environment files — NEVER push these ──────────────────
+# They contain passwords, API keys, JWT secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ── VSCode ────────────────────────────────────────────────
+.vscode/settings.json
+.vscode/launch.json
+# Keep .vscode/extensions.json if you want to share recommended extensions
+
+# ── OS files ──────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+
+# ── Logs ──────────────────────────────────────────────────
+logs/
+*.log
+
+# ── Uploads and generated images ─────────────────────────
+uploads/
+web-app/server/uploads/
