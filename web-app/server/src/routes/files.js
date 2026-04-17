@@ -1,14 +1,33 @@
 const express = require('express')
 const path    = require('path')
 const fs      = require('fs')
-const authMiddleware = require('../middleware/authMiddleware')
+const jwt     = require('jsonwebtoken')
 const Job     = require('../models/Job')
 
 const router = express.Router()
 
 // GET /api/files/:type/:filename
 // type = 'originals' or 'cloaked'
-router.get('/:type/:filename', authMiddleware, async (req, res) => {
+router.get('/:type/:filename', async (req, res) => {
+  // Browser <img> requests do not send Authorization headers.
+  // Accept token from either Bearer header or ?token= query.
+  const authHeader = req.headers['authorization']
+  const bearerToken = authHeader?.startsWith('Bearer ')
+    ? authHeader.split(' ')[1]
+    : null
+  const token = bearerToken || req.query.token
+
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided' })
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    req.userId = decoded.userId
+  } catch (err) {
+    return res.status(401).json({ error: 'Invalid or expired token' })
+  }
+
   const { type, filename } = req.params
 
   if (!['originals', 'cloaked'].includes(type))

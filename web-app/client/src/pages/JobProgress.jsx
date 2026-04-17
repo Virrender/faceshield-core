@@ -213,15 +213,16 @@ function ImageCompare({ originalUrl, cloakedUrl }) {
   const [sliderX, setSliderX] = useState(50)
   const containerRef = useRef(null)
   const dragging = useRef(false)
+  const apiBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/api\/?$/, '')
+  const token = localStorage.getItem('token')
+  const tokenQuery = token ? `?token=${encodeURIComponent(token)}` : ''
 
   function onMouseMove(e) {
-    if (!dragging.current) return
+    if (!dragging.current || !containerRef.current) return
     const rect = containerRef.current.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
     setSliderX(Math.min(Math.max(x, 2), 98))
   }
-
-  const baseUrl = 'http://localhost:5000'
 
   if (!originalUrl || !cloakedUrl) return (
     <div style={{ color: '#555', fontSize: '13px', padding: '20px', textAlign: 'center' }}>
@@ -236,27 +237,90 @@ function ImageCompare({ originalUrl, cloakedUrl }) {
       </p>
       <div
         ref={containerRef}
-        style={{ position: 'relative', width: '100%', height: '220px', borderRadius: '8px', overflow: 'hidden', cursor: 'col-resize', userSelect: 'none' }}
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '260px',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          cursor: 'col-resize',
+          userSelect: 'none',
+          background: '#0a0a0e',
+        }}
         onMouseMove={onMouseMove}
         onMouseDown={() => { dragging.current = true }}
         onMouseUp={() => { dragging.current = false }}
         onMouseLeave={() => { dragging.current = false }}
       >
-        {/* Cloaked — full width underneath */}
-        <img src={baseUrl + cloakedUrl}   alt="cloaked"   style={{ ...styles.compareImg }} />
-        {/* Original — clipped to left of slider */}
-        <div style={{ position: 'absolute', top: 0, left: 0, width: `${sliderX}%`, height: '100%', overflow: 'hidden' }}>
-          <img src={baseUrl + originalUrl} alt="original" style={{ ...styles.compareImg, width: '100%' }} />
+        {/* Cloaked image — full width, sits underneath */}
+        <img
+          src={apiBase + cloakedUrl + tokenQuery}
+          alt="cloaked"
+          style={styles.compareImg}
+        />
+
+        {/* Original image — same placement, clipped by reveal mask */}
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
+          <img
+            src={apiBase + originalUrl + tokenQuery}
+            alt="original"
+            style={{
+              ...styles.compareImg,
+              clipPath: `inset(0 ${100 - sliderX}% 0 0)`,
+            }}
+          />
         </div>
-        {/* Slider line */}
-        <div style={{ position: 'absolute', top: 0, left: `${sliderX}%`, width: '2px', height: '100%', background: '#fff', transform: 'translateX(-1px)' }}>
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '32px', height: '32px', borderRadius: '50%', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', color: '#000', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+
+        {/* Divider line */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: `${sliderX}%`,
+          transform: 'translateX(-1px)',
+          width: '2px',
+          height: '100%',
+          background: 'rgba(255,255,255,0.8)',
+          pointerEvents: 'none',
+        }}>
+          {/* Handle */}
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            background: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '14px',
+            color: '#000',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.5)',
+            fontWeight: '700',
+          }}>
             ⇔
           </div>
         </div>
+
         {/* Labels */}
-        <div style={{ position: 'absolute', top: '8px', left: '10px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '11px', padding: '2px 8px', borderRadius: '4px' }}>Original</div>
-        <div style={{ position: 'absolute', top: '8px', right: '10px', background: 'rgba(108,99,255,0.8)', color: '#fff', fontSize: '11px', padding: '2px 8px', borderRadius: '4px' }}>Cloaked</div>
+        <div style={{
+          position: 'absolute', top: '10px', left: '10px',
+          background: 'rgba(0,0,0,0.65)', color: '#fff',
+          fontSize: '11px', padding: '3px 8px', borderRadius: '4px',
+          pointerEvents: 'none',
+        }}>
+          Original
+        </div>
+        <div style={{
+          position: 'absolute', top: '10px', right: '10px',
+          background: 'rgba(108,99,255,0.85)', color: '#fff',
+          fontSize: '11px', padding: '3px 8px', borderRadius: '4px',
+          pointerEvents: 'none',
+        }}>
+          Cloaked
+        </div>
       </div>
     </div>
   )
@@ -279,7 +343,15 @@ const styles = {
   metricsRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: '12px', alignItems: 'center', marginTop: '14px' },
   btn:        { display: 'block', width: '100%', padding: '14px', background: '#6c63ff', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', marginTop: '12px' },
   btnSec:     { background: '#1a1a24', border: '1px solid #2a2a38' },
-  compareImg: { position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' },
+  compareImg: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain',
+    objectPosition: 'center',
+  },
 
   // Water screen
   waterPage:  { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '40px 20px' },
