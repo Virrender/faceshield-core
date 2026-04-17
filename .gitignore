@@ -33,3 +33,7 @@ env/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Ignore upload test images
+web-app/server/uploads/cloaked/
+web-app/server/uploads/originals/
