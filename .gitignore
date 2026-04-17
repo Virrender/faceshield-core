@@ -12,6 +12,10 @@ build/
 dist/
 npm-debug.log*
 
+# Ignore test upload images
+web-app/server/uploads/cloaked/
+web-app/server/uploads/originals/
+
 # =========================
 # 3. PYTHON & ML (faceshield & python-service)
 # =========================
