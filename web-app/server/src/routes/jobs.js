@@ -105,6 +105,7 @@ async function processJob(jobId, files, mode) {
 
   const results       = []
   const cloakedImages = []
+  let jobError = null
 
   for (const file of files) {
     try {
@@ -112,7 +113,7 @@ async function processJob(jobId, files, mode) {
       const form = new FormData()
       form.append('file', fs.createReadStream(file.path), {
         filename:    file.originalname,
-        contentType: 'image/jpeg',
+        contentType: file.mimetype || 'application/octet-stream',
       })
       form.append('mode', mode)
 
@@ -127,8 +128,17 @@ async function processJob(jobId, files, mode) {
         }
       )
 
-      // Parse metrics from response header
-      const metrics = JSON.parse(response.headers['x-metrics'])
+      // Parse metrics from response header (optional)
+      let metrics = null
+      const metricsHeader = response.headers?.['x-metrics']
+      if (metricsHeader) {
+        try {
+          metrics = JSON.parse(metricsHeader)
+        } catch (e) {
+          // keep going; cloaked image may still be valid
+          metrics = null
+        }
+      }
       const elapsed  = parseFloat(response.headers['x-elapsed'] || '0')
       // Record real timing for future ETA estimates
       if (elapsed > 0) recordTiming(mode, elapsed)
@@ -142,27 +152,51 @@ async function processJob(jobId, files, mode) {
       cloakedImages.push({ filename: 'cloaked-' + file.originalname, filepath: cloakedPath })
       results.push({
         originalFilename:  file.originalname,
-        cosine_similarity: metrics.cosine_similarity,
-        ssim:              metrics.ssim,
-        psnr:              metrics.psnr,
-        verdict:           metrics.verdict,
+        cosine_similarity: metrics?.cosine_similarity,
+        ssim:              metrics?.ssim,
+        psnr:              metrics?.psnr,
+        verdict:           metrics?.verdict,
       })
 
     } catch (err) {
+      let detail = err.message
+      // If Python returned a JSON error body, surface it.
+      if (err.response?.data) {
+        try {
+          const raw = Buffer.isBuffer(err.response.data)
+            ? err.response.data.toString('utf8')
+            : String(err.response.data)
+          detail = raw
+        } catch (e) {
+          // ignore decoding issues
+        }
+      }
+
+      jobError = jobError || detail
       results.push({
         originalFilename: file.originalname,
-        error:            err.message,
+        error:            detail,
       })
     }
   }
 
-  // Update job as done
-  await Job.findByIdAndUpdate(jobId, {
-    status:       'done',
+  const update = {
     cloakedImages,
     results,
-    completedAt:  new Date(),
-  })
+    completedAt: new Date(),
+  }
+
+  // If nothing was actually produced, mark job failed so UI can show a clear error.
+  if (cloakedImages.length === 0) {
+    await Job.findByIdAndUpdate(jobId, {
+      ...update,
+      status: 'failed',
+      error: jobError || 'No cloaked images were generated',
+    })
+    return
+  }
+
+  await Job.findByIdAndUpdate(jobId, { ...update, status: 'done' })
 }
 
 // GET /api/jobs/:jobId — poll for status
@@ -173,6 +207,10 @@ router.get('/:jobId', authMiddleware, async (req, res) => {
 
     // Attach public URLs for the frontend to display
     const jobObj = job.toObject()
+    if (jobObj.status === 'done' && (!jobObj.cloakedImages || jobObj.cloakedImages.length === 0)) {
+      jobObj.status = 'failed'
+      jobObj.error = jobObj.error || 'Cloaking finished without producing any cloaked images'
+    }
     jobObj.imageUrls = {
       originals: job.originalImages.map(img => ({
         filename: img.filename,
@@ -195,8 +233,28 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const jobs = await Job.find({ userId: req.userId })
       .sort({ createdAt: -1 })
-      .limit(20)
-    res.json({ jobs })
+      .limit(100)
+
+    const jobsWithUrls = jobs.map(job => {
+      const obj = job.toObject()
+      if (obj.status === 'done' && (!obj.cloakedImages || obj.cloakedImages.length === 0)) {
+        obj.status = 'failed'
+        obj.error = obj.error || 'Cloaking finished without producing any cloaked images'
+      }
+      obj.imageUrls = {
+        originals: job.originalImages.map(img => ({
+          filename: img.filename,
+          url: toFileUrl(img.filepath, 'originals'),
+        })),
+        cloaked: job.cloakedImages.map(img => ({
+          filename: img.filename,
+          url: toFileUrl(img.filepath, 'cloaked'),
+        })),
+      }
+      return obj
+    })
+
+    res.json({ jobs: jobsWithUrls })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }

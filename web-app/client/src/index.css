@@ -1,111 +1,191 @@
+@import "tailwindcss";
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+  --background: #0f0f13;
+  --foreground: #f5f5f7;
+  --card: #1a1a24;
+  --card-foreground: #f5f5f7;
+  --border: #2a2a38;
+  --primary: #6c63ff;
+  --primary-foreground: #ffffff;
+  --secondary: #1a1a24;
+  --secondary-foreground: #a1a1aa;
+  --muted: #27272a;
+  --muted-foreground: #71717a;
+  --success: #43d9ad;
+  --warning: #ffd166;
+  --error: #ff6b6b;
+  --radius: 0.75rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+* {
+  box-sizing: border-box;
+  padding: 0;
+}
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--primary);
+  color: white;
+}
+
+/* 1. Parent container: Added horizontal breathing space and vertical stacking */
+.space-y-3.ai-style-change-1 {
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
+  gap: 0.75rem; /* Space between label and input */
+  padding-left: 1.5rem; /* Left breathing space */
+  padding-right: 1.5rem; /* Right breathing space */
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+/* 2. Label: Removed internal padding to align with the input field */
+.ai-style-change-2 {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
-  margin: 0;
+/* 3. Input container: Ensure it takes full width within the new padding */
+.relative {
+  width: 100%;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+/* Password container styles */
+/* 1. Parent container: Added horizontal breathing space and vertical stacking */
+.password-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* Equivalent to 12px - space between label and input */
+  padding-left: 1.5rem; /* Equivalent to 24px - left breathing space */
+  padding-right: 1.5rem; /* Equivalent to 24px - right breathing space */
 }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+/* 2. Label: Removed internal padding to align perfectly with the input field */
+.password-container label {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+/* 3. Input container: Ensure it fills the width within the new padding */
+.password-container .relative {
+  width: 100%;
+}
+
+/* Create Account Button: Small, Centered, Theme-matched, with Glow */
+button.create-account {
+  /* Resizing and Centering */
+  width: auto;
+  min-width: 200px;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  /* Internal Breathing Space */
+  padding: 0.75rem 2.5rem; 
+  
+  /* Theme Matching (White background on dark theme) */
+  background-color: #ffffff;
+  color: #0f0f13; /* Dark text to match background */
+  border: 1px solid #ffffff;
+  border-radius: 0.75rem; /* Equivalent to rounded-xl */
+  
+  /* Subtle Glow Effect */
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.3), 0 0 5px rgba(255, 255, 255, 0.1);
+  
+  /* Animation/Transition */
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+/* Hover effect for the glow and interaction */
+button.create-account:hover {
+  background-color: #f3f3f3;
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.5), 0 0 10px rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+p.text-xs.text-\[\#71717a\].mt-8.leading-relaxed {
+  margin-bottom: 1.5rem; /* Equivalent to 24px of bottom breathing space */
+}
+
+.bg-\[\#1a1a24\].rounded-3xl {
+  padding-top: 3rem; /* Top breathing space for the container */
+}
+
+div.mt-8.text-center.text-sm.text-\[\#71717a\] {
+  margin-bottom: 1.5rem; /* Equivalent to 24px of bottom breathing space */
+}
+
+/* 1. Logo Container (FaceShield)
+   - Centers the logo and adds breathing space at the top/bottom */
+a.logo-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem; /* Space between shield icon and text */
+  margin-top: 2rem; /* The 32px top breathing space you requested */
+  margin-bottom: 2.5rem; /* 40px space below before the card starts */
+  text-decoration: none;
+}
+
+/* 2. Shield Icon (SVG)
+   - Sizing and theme color */
+svg.lucide-shield {
+  width: 2.25rem; /* 36px */
+  height: 2.25rem;
+  color: #6c63ff; /* Primary purple theme color */
+}
+
+/* 3. "FaceShield" Text
+   - Large, bold, and high-contrast white */
+span.logo-text {
+  font-size: 1.875rem; /* 30px / text-3xl */
+  font-weight: 700; /* Bold */
+  color: #ffffff;
+  letter-spacing: -0.025em; /* Subtle tight tracking for modern look */
+}
+
+/* 1. Move the icon from the left to the right side */
+.relative svg {
+  left: auto !important;
+  right: 1rem !important; /* Positions the icon on the right edge */
+}
+
+/* 2. Adjust input padding: remove left space and add right space for the icon */
+.relative input {
+  padding-left: 1rem !important;   /* Standard left padding */
+  padding-right: 3rem !important;  /* Space for the icon on the right */
 }

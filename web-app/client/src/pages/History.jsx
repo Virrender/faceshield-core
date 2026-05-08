@@ -1,77 +1,358 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { format } from 'date-fns'
+import { Zap, Scale, Lock, Clock, Check, X, Loader2, Plus, Shield, Download, ChevronDown } from 'lucide-react'
 import { getHistory } from '../api'
 
-export default function History() {
-  const [jobs, setJobs]       = useState([])
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || 'http://localhost:5000').replace(/\/$/, '')
+const withToken = (url) => {
+  if (!url) return url
+  const token = localStorage.getItem('token')
+  if (!token) return url
+  return url.includes('?') ? `${url}&token=${encodeURIComponent(token)}` : `${url}?token=${encodeURIComponent(token)}`
+}
+
+const modeConfig = {
+  fast: { name: 'Quick Cloak', icon: Zap, color: '#ffd166', bg: 'bg-[#ffd166]/10' },
+  balanced: { name: 'Balanced', icon: Scale, color: '#6c63ff', bg: 'bg-[#6c63ff]/10' },
+  strong: { name: 'Max Protection', icon: Lock, color: '#43d9ad', bg: 'bg-[#43d9ad]/10' }
+}
+
+const statusConfig = {
+  done: { label: 'Complete', icon: Check, color: '#43d9ad', bg: 'bg-[#43d9ad]/10' },
+  processing: { label: 'Processing', icon: Loader2, color: '#6c63ff', bg: 'bg-[#6c63ff]/10', animate: true },
+  failed: { label: 'Failed', icon: X, color: '#ff6b6b', bg: 'bg-[#ff6b6b]/10' }
+}
+
+function History() {
+  const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(true)
-  const navigate              = useNavigate()
+  const [error, setError] = useState('')
+  const [expandedJob, setExpandedJob] = useState(null)
 
   useEffect(() => {
-    getHistory()
-      .then(res => setJobs(res.data.jobs))
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    fetchHistory()
   }, [])
 
+  const fetchHistory = async () => {
+    try {
+      const res = await getHistory()
+      // Sort by date, newest first
+      const sortedJobs = (res.data.jobs || res.data || []).sort((a, b) => 
+        new Date(b.createdAt) - new Date(a.createdAt)
+      )
+      setJobs(sortedJobs)
+    } catch (err) {
+      setError('Failed to load history')
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f0f13] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#6c63ff] animate-spin" />
+      </div>
+    )
+  }
+
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h1 style={styles.title}>Your cloaked photos</h1>
+    <div className="min-h-screen bg-[#0f0f13] py-8 px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10"
+        >
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Your protected photos</h1>
+            <p className="text-[#a1a1aa]">{jobs.length} job{jobs.length !== 1 ? 's' : ''} processed</p>
+          </div>
+          <Link
+            to="/upload"
+            className="flex items-center gap-2 px-5 py-3 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-xl transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            New job
+          </Link>
+        </motion.div>
 
-        {loading && <p style={styles.sub}>Loading history...</p>}
-
-        {!loading && jobs.length === 0 && (
-          <div style={styles.empty}>
-            <p style={{ color: '#888' }}>No jobs yet.</p>
-            <button style={styles.btn} onClick={() => navigate('/upload')}>
-              Cloak your first photo
-            </button>
+        {/* Error state */}
+        {error && (
+          <div className="p-4 bg-[#ff6b6b]/10 border border-[#ff6b6b]/20 rounded-xl text-[#ff6b6b] text-center mb-8">
+            {error}
           </div>
         )}
 
-        {jobs.map(job => (
-          <div key={job._id} style={styles.jobCard}>
-            <div style={styles.jobTop}>
-              <span style={styles.mode}>{job.mode}</span>
-              <span style={{ ...styles.status, color: job.status === 'done' ? '#43d9ad' : job.status === 'failed' ? '#ff6b6b' : '#ffd166' }}>
-                {job.status}
-              </span>
-              <span style={styles.date}>
-                {new Date(job.createdAt).toLocaleDateString()}
-              </span>
+        {/* Empty state */}
+        {jobs.length === 0 && !error && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-20"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-[#1a1a24] flex items-center justify-center mx-auto mb-6">
+              <Shield className="w-10 h-10 text-[#71717a]" />
             </div>
+            <h2 className="text-xl font-semibold mb-3">No protected photos yet</h2>
+            <p className="text-[#a1a1aa] mb-8">Upload your first image to get started</p>
+            <Link
+              to="/upload"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-[#6c63ff] hover:bg-[#5a52e0] text-white rounded-xl transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Upload photos
+            </Link>
+          </motion.div>
+        )}
 
-            {job.results?.map((r, i) => (
-              <div key={i} style={styles.result}>
-                <span style={styles.filename}>{r.originalFilename}</span>
-                {r.verdict && (
-                  <span style={{ color: r.verdict === 'Protected' ? '#43d9ad' : '#ff6b6b', fontSize: '13px' }}>
-                    {r.verdict} · cos_sim {r.cosine_similarity?.toFixed(3)}
-                  </span>
-                )}
-                {r.error && <span style={{ color: '#ff6b6b', fontSize: '13px' }}>{r.error}</span>}
-              </div>
-            ))}
-          </div>
-        ))}
+        {/* Jobs grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+          {jobs.map((job, index) => (
+            <JobCard 
+              key={job._id || job.id || index} 
+              job={job} 
+              isExpanded={expandedJob === (job._id || job.id)}
+              onToggle={() => setExpandedJob(
+                expandedJob === (job._id || job.id) ? null : (job._id || job.id)
+              )}
+              delay={index * 0.05}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-const styles = {
-  page:      { minHeight: '100vh', background: '#0f0f13', padding: '40px 20px' },
-  container: { maxWidth: '640px', margin: '0 auto' },
-  title:     { color: '#fff', fontSize: '28px', marginBottom: '8px' },
-  sub:       { color: '#888' },
-  empty:     { textAlign: 'center', padding: '60px 0' },
-  jobCard:   { background: '#1a1a24', border: '1px solid #2a2a38', borderRadius: '10px', padding: '18px', marginBottom: '14px' },
-  jobTop:    { display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '12px' },
-  mode:      { background: '#2a2a38', color: '#a0a0c0', padding: '3px 10px', borderRadius: '12px', fontSize: '12px' },
-  status:    { fontSize: '13px', fontWeight: '600' },
-  date:      { color: '#666', fontSize: '12px', marginLeft: 'auto' },
-  result:    { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderTop: '1px solid #2a2a38' },
-  filename:  { color: '#888', fontSize: '13px' },
-  btn:       { padding: '12px 24px', background: '#6c63ff', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', marginTop: '16px' },
+function JobCard({ job, isExpanded, onToggle, delay }) {
+  const mode = modeConfig[job.mode] || modeConfig.balanced
+  const status = statusConfig[job.status] || statusConfig.processing
+  const ModeIcon = mode.icon
+  const StatusIcon = status.icon
+
+  const images = job.imageUrls?.originals?.map((orig, i) => ({
+    original: withToken(`${API_ORIGIN}${orig.url}`),
+    cloaked: withToken(`${API_ORIGIN}${job.imageUrls.cloaked?.[i]?.url}`)
+  })) || []
+
+  const firstResult = job.results?.[0] || null
+
+  const formattedDate = job.createdAt 
+    ? format(new Date(job.createdAt), 'MMM d, yyyy · h:mm a')
+    : 'Unknown date'
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className="h-full bg-[#1a1a24] border border-[#2a2a38] rounded-2xl overflow-hidden hover:border-[#6c63ff]/30 transition-colors flex flex-col"
+    >
+      {/* Header */}
+      <div className="p-5 flex-1">
+        <div className="flex items-center justify-between mb-4">
+          {/* Date */}
+          <div className="min-w-0 flex items-center gap-2 text-sm text-[#71717a]">
+            <Clock className="w-4 h-4" />
+            <span className="truncate">{formattedDate}</span>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {/* Mode badge */}
+          <div 
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${mode.bg}`}
+            style={{ color: mode.color }}
+          >
+            <ModeIcon className="w-3.5 h-3.5" />
+            {mode.name}
+          </div>
+
+          {/* Status badge */}
+          <div 
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium ${status.bg}`}
+            style={{ color: status.color }}
+          >
+            <StatusIcon className={`w-3.5 h-3.5 ${status.animate ? 'animate-spin' : ''}`} />
+            {status.label}
+          </div>
+
+          {/* Image count */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-[#27272a] text-[#a1a1aa]">
+            {images.length || '?'} image{images.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+
+        {/* Image compare slider (for done jobs) */}
+        {job.status === 'done' && images.length > 0 && (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl overflow-hidden border border-[#2a2a38] bg-[#0f0f13]">
+              <div className="px-3 py-2 border-b border-[#2a2a38] text-xs font-medium text-[#a1a1aa]">
+                Original
+              </div>
+              <div className="aspect-video">
+                <img
+                  src={images[0].original}
+                  alt="Original"
+                  className="h-full w-full object-cover"
+                  crossOrigin="anonymous"
+                />
+              </div>
+            </div>
+            <div className="rounded-xl overflow-hidden border border-[#2a2a38] bg-[#0f0f13]">
+              <div className="px-3 py-2 border-b border-[#2a2a38] text-xs font-medium text-[#a1a1aa]">
+                Cloaked
+              </div>
+              <div className="aspect-video">
+                {images[0].cloaked ? (
+                  <img
+                    src={images[0].cloaked}
+                    alt="Cloaked"
+                    className="h-full w-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-[#71717a] text-xs">
+                    Not available
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Processing state */}
+        {job.status === 'processing' && (
+          <div className="aspect-video bg-[#27272a] rounded-xl flex items-center justify-center">
+            <div className="text-center">
+              <Loader2 className="w-8 h-8 text-[#6c63ff] animate-spin mx-auto mb-3" />
+              <p className="text-sm text-[#71717a]">Processing...</p>
+            </div>
+          </div>
+        )}
+
+        {/* Failed state */}
+        {job.status === 'failed' && (
+          <div className="aspect-video bg-[#ff6b6b]/5 rounded-xl flex items-center justify-center border border-[#ff6b6b]/10">
+            <div className="text-center">
+              <X className="w-8 h-8 text-[#ff6b6b] mx-auto mb-3" />
+              <p className="text-sm text-[#ff6b6b]">Processing failed</p>
+            </div>
+          </div>
+        )}
+
+        {/* Metrics (for done jobs) */}
+        {job.status === 'done' && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            <div className="text-center p-2 bg-[#27272a] rounded-lg">
+              <div className="text-lg font-bold text-[#43d9ad]">
+                {typeof firstResult?.cosine_similarity === 'number'
+                  ? `${Math.round((1 - firstResult.cosine_similarity) * 100)}%`
+                  : '—'}
+              </div>
+              <div className="text-xs text-[#71717a]">Identity shift</div>
+            </div>
+            <div className="text-center p-2 bg-[#27272a] rounded-lg">
+              <div className="text-lg font-bold text-[#6c63ff]">
+                {typeof firstResult?.ssim === 'number'
+                  ? `${Math.round(firstResult.ssim * 100)}%`
+                  : '—'}
+              </div>
+              <div className="text-xs text-[#71717a]">Visual quality</div>
+            </div>
+            <div className="text-center p-2 bg-[#27272a] rounded-lg">
+              <div className="text-lg font-bold text-[#ffd166]">
+                {typeof firstResult?.psnr === 'number'
+                  ? `${firstResult.psnr.toFixed(1)} dB`
+                  : '—'}
+              </div>
+              <div className="text-xs text-[#71717a]">PSNR</div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Expanded view with all images */}
+      {isExpanded && images.length > 0 && (
+        <motion.div
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: 'auto', opacity: 1 }}
+          exit={{ height: 0, opacity: 0 }}
+          className="border-t border-[#2a2a38] p-5"
+        >
+          <p className="text-sm text-[#71717a] mb-4">Original and cloaked images:</p>
+          <div className="space-y-4">
+            {images.map((img, i) => (
+              <div key={i} className="bg-[#0f0f13]/40 border border-[#2a2a38] rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-sm font-medium text-white">Image {i + 1}</div>
+                  {img.cloaked && (
+                    <a
+                      href={img.cloaked}
+                      download
+                      className="inline-flex items-center gap-2 text-sm text-[#6c63ff] hover:text-white transition-colors"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download cloaked
+                    </a>
+                  )}
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-lg overflow-hidden border border-[#2a2a38] bg-[#0f0f13]">
+                    <div className="px-3 py-2 border-b border-[#2a2a38] text-xs font-medium text-[#a1a1aa]">Original</div>
+                    <div className="aspect-square">
+                      <img
+                        src={img.original}
+                        alt={`Original ${i + 1}`}
+                        className="h-full w-full object-cover"
+                        crossOrigin="anonymous"
+                      />
+                    </div>
+                  </div>
+                  <div className="rounded-lg overflow-hidden border border-[#2a2a38] bg-[#0f0f13]">
+                    <div className="px-3 py-2 border-b border-[#2a2a38] text-xs font-medium text-[#a1a1aa]">Cloaked</div>
+                    <div className="aspect-square">
+                      {img.cloaked ? (
+                        <img
+                          src={img.cloaked}
+                          alt={`Cloaked ${i + 1}`}
+                          className="h-full w-full object-cover"
+                          crossOrigin="anonymous"
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center text-[#71717a] text-xs">
+                          Not available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Show more button */}
+      {images.length > 0 && (
+        <button
+          onClick={onToggle}
+          className="w-full py-3 text-sm text-[#6c63ff] hover:bg-[#6c63ff]/5 border-t border-[#2a2a38] transition-colors"
+        >
+          <span className="inline-flex items-center justify-center gap-2">
+            {isExpanded ? 'Hide details' : 'View originals & cloaked'}
+            <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+      )}
+    </motion.div>
+  )
 }
+
+export default History

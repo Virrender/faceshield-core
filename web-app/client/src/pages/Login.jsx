@@ -1,76 +1,137 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Shield, Mail, Lock, ArrowRight, Loader2 } from 'lucide-react'
 import { login } from '../api'
 import { useAuth } from '../context/AuthContext'
 
-export default function Login() {
-  const [email, setEmail]       = useState('')
+function Login() {
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError]       = useState('')
-  const [loading, setLoading]   = useState(false)
-  const { loginUser }           = useAuth()
-  const navigate                = useNavigate()
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
+  const { loginUser } = useAuth()
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
+
     try {
       const res = await login(email, password)
-      loginUser(res.data.token, res.data.user)
+      const token = res.data.token
+      const user = res.data.user || { email }
+      loginUser(token, user)
       navigate('/upload')
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed')
+      setError(err.response?.data?.message || 'Invalid email or password.')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>FaceShield</h1>
-        <p style={styles.sub}>Sign in to your account</p>
+    <div className="min-h-screen flex items-center justify-center px-4 py-8 bg-[#0f0f13] relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 bg-gradient-to-b from-[#6c63ff]/5 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#6c63ff]/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-[#43d9ad]/10 rounded-full blur-3xl" />
 
-        {error && <div style={styles.error}>{error}</div>}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-lg relative z-10"
+      >
+        {/* Logo */}
+        <Link to="/" className="logo-container">
+          <Shield className="lucide-shield" />
+          <span className="logo-text">FaceShield</span>
+        </Link>
 
-        <form onSubmit={handleSubmit}>
-          <input
-            style={styles.input}
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-            required
-          />
-          <input
-            style={styles.input}
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            required
-          />
-          <button style={styles.btn} disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
+        {/* Card */}
+        <div className="bg-[#1a1a24] border border-[#2a2a38] rounded-3xl px-12 py-10 sm:px-14 sm:py-12">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-bold mb-3 text-white">Welcome back</h1>
+            <p className="text-[#a1a1aa] text-base">Sign in to continue protecting your photos</p>
+          </div>
 
-        <p style={styles.link}>
-          No account? <Link to="/register">Register</Link>
-        </p>
-      </div>
+          <form onSubmit={handleSubmit} className="space-y-7">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-[#ff6b6b]/10 border border-[#ff6b6b]/30 rounded-2xl text-[#ff6b6b] text-sm font-medium"
+              >
+                {error}
+              </motion.div>
+            )}
+
+            {/* Email Field */}
+            <div className="space-y-3 ai-style-change-1">
+              <label htmlFor="email" className="block text-base font-semibold text-white ai-style-change-2" style={{ paddingLeft: '1.5rem' }}>
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a] pointer-events-none" />
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="w-full pl-14 pr-6 py-4 bg-[#27272a] border border-[#2a2a38] rounded-xl text-white placeholder-[#71717a] text-lg focus:outline-none focus:border-[#6c63ff] focus:ring-2 focus:ring-[#6c63ff]/30 transition-all h-14"
+                />
+              </div>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-3 password-container">
+              <label htmlFor="password" className="block text-base font-semibold text-white" style={{ paddingLeft: '1.5rem' }}>
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#71717a] pointer-events-none" />
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="w-full pl-14 pr-6 py-4 bg-[#27272a] border border-[#2a2a38] rounded-xl text-white placeholder-[#71717a] text-lg focus:outline-none focus:border-[#6c63ff] focus:ring-2 focus:ring-[#6c63ff]/30 transition-all h-14"
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-[#6c63ff] hover:bg-[#5a52e0] disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 text-base mt-8 create-account"
+            >
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <>
+                  Sign in
+                  <ArrowRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Sign Up Link */}
+          <div className="mt-8 text-center text-sm text-[#71717a]">
+            Don't have an account?{' '}
+            <Link to="/register" className="text-[#6c63ff] hover:text-[#7b72ff] font-semibold transition-colors">
+              Create one
+            </Link>
+          </div>
+        </div>
+      </motion.div>
     </div>
   )
 }
 
-const styles = {
-  page:  { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f0f13' },
-  card:  { background: '#1a1a24', padding: '40px', borderRadius: '12px', width: '100%', maxWidth: '400px', border: '1px solid #2a2a38' },
-  title: { color: '#fff', fontSize: '28px', marginBottom: '6px', textAlign: 'center' },
-  sub:   { color: '#888', textAlign: 'center', marginBottom: '28px' },
-  input: { width: '100%', padding: '12px', marginBottom: '14px', background: '#0f0f13', border: '1px solid #2a2a38', borderRadius: '8px', color: '#fff', fontSize: '14px', boxSizing: 'border-box' },
-  btn:   { width: '100%', padding: '12px', background: '#6c63ff', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', cursor: 'pointer', fontWeight: '600' },
-  error: { background: '#2d1515', color: '#ff6b6b', padding: '10px', borderRadius: '6px', marginBottom: '16px', fontSize: '14px' },
-  link:  { color: '#888', textAlign: 'center', marginTop: '20px', fontSize: '14px' },
-}
+export default Login

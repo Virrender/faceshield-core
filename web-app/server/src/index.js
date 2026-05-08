@@ -10,12 +10,16 @@ const jobRoutes  = require('./routes/jobs')
 const app = express()
 
 // Middleware
-const allowedOrigins = [
+const allowedOrigins = (process.env.CORS_ORIGINS || [
+  'http://localhost:3000',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
-]
+].join(','))
+  .split(',')
+  .map(s => s.trim())
+  .filter(Boolean)
 
 app.use(cors({
   origin(origin, callback) {
@@ -24,7 +28,8 @@ app.use(cors({
       return callback(null, true)
     }
     return callback(new Error(`CORS blocked for origin: ${origin}`))
-  }
+  },
+  credentials: true,
 }))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))

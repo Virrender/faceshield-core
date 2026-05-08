@@ -1,146 +1,304 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Upload as UploadIcon, X, Image, Zap, Scale, Lock, Loader2, Check } from 'lucide-react'
 import { submitJob } from '../api'
 
-const MODES = [
-  { id: 'fast',     label: 'Fast',     desc: '~45 sec · subtle protection',    steps: 40  },
-  { id: 'balanced', label: 'Balanced', desc: '~3 min · good protection',       steps: 150 },
-  { id: 'strong',   label: 'Strong',   desc: '~6 min · maximum protection',    steps: 300 },
+const modes = [
+  {
+    id: 'fast',
+    name: 'Quick Cloak',
+    icon: Zap,
+    time: '~45 sec',
+    description: 'Fast processing',
+    detail: 'Good protection',
+    color: '#ffd166',
+    estimatedSeconds: 45
+  },
+  {
+    id: 'balanced',
+    name: 'Balanced',
+    icon: Scale,
+    time: '~3 min',
+    description: 'Invisible noise',
+    detail: 'Strong protection',
+    color: '#6c63ff',
+    estimatedSeconds: 180,
+    popular: true
+  },
+  {
+    id: 'strong',
+    name: 'Max Protection',
+    icon: Lock,
+    time: '~6 min',
+    description: 'Best visual quality',
+    detail: 'Maximum identity shift',
+    color: '#43d9ad',
+    estimatedSeconds: 360
+  }
 ]
 
-export default function Upload() {
-  const [files, setFiles]     = useState([])
-  const [mode, setMode]       = useState('balanced')
-  const [error, setError]     = useState('')
+function Upload() {
+  const [files, setFiles] = useState([])
+  const [selectedMode, setSelectedMode] = useState('balanced')
+  const [isDragging, setIsDragging] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [dragging, setDragging] = useState(false)
-  const navigate              = useNavigate()
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
 
-  function handleFiles(newFiles) {
-    const arr = Array.from(newFiles).slice(0, 5)
-    const valid = arr.filter(f => f.type.startsWith('image/'))
-    if (valid.length !== arr.length) setError('Only image files allowed')
-    else setError('')
-    setFiles(valid)
-  }
-
-  const onDrop = useCallback(e => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault()
-    setDragging(false)
-    handleFiles(e.dataTransfer.files)
+    setIsDragging(true)
   }, [])
 
-  async function handleSubmit() {
-    if (files.length === 0) return setError('Please select at least one image')
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault()
+    setIsDragging(false)
+  }, [])
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault()
+    setIsDragging(false)
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      file => file.type === 'image/jpeg' || file.type === 'image/png'
+    )
+    addFiles(droppedFiles)
+  }, [])
+
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files).filter(
+      file => file.type === 'image/jpeg' || file.type === 'image/png'
+    )
+    addFiles(selectedFiles)
+    e.target.value = ''
+  }
+
+  const addFiles = (newFiles) => {
     setError('')
+    const totalFiles = files.length + newFiles.length
+    if (totalFiles > 5) {
+      setError('Maximum 5 images allowed')
+      return
+    }
+    setFiles(prev => [...prev, ...newFiles])
+  }
+
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleSubmit = async () => {
+    if (files.length === 0) {
+      setError('Please select at least one image')
+      return
+    }
+
     setLoading(true)
+    setError('')
+
+    const formData = new FormData()
+    files.forEach(file => formData.append('images', file))
+    formData.append('mode', selectedMode)
 
     try {
-      const formData = new FormData()
-      files.forEach(f => formData.append('images', f))
-      formData.append('mode', mode)
-
       const res = await submitJob(formData)
+      const mode = modes.find(m => m.id === selectedMode)
       navigate(`/progress/${res.data.jobId}`, {
-        state: { estimatedSeconds: res.data.estimatedSeconds, mode, total: files.length }
+        state: {
+          estimatedSeconds: (mode?.estimatedSeconds ?? 180) * files.length,
+          mode: selectedMode,
+          total: files.length
+        }
       })
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit job')
+      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to submit job. Please try again.')
       setLoading(false)
     }
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        <h1 style={styles.title}>Cloak your face</h1>
-        <p style={styles.sub}>Upload 1–5 photos. We make them invisible to face recognition AI.</p>
+    <div className="min-h-screen bg-[#0f0f13] pt-8 pb-16 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-10 sm:mb-12"
+        >
+          <h1 className="text-3xl md:text-4xl font-bold mb-3">Protect your photos</h1>
+          <p className="text-[#a1a1aa] text-lg">Upload up to 5 images and make them invisible to AI</p>
+        </motion.div>
 
         {/* Drop zone */}
-        <div
-          style={{ ...styles.dropzone, ...(dragging ? styles.dropzoneActive : {}) }}
-          onDrop={onDrop}
-          onDragOver={e => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onClick={() => document.getElementById('fileInput').click()}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className={`relative border-2 border-dashed rounded-2xl px-6 sm:px-10 lg:px-12 py-[1cm] text-center transition-all cursor-pointer flex flex-col min-h-[220px] sm:min-h-[240px] ${
+            isDragging
+              ? 'border-[#6c63ff] bg-[#6c63ff]/10'
+              : 'border-[#2a2a38] hover:border-[#6c63ff]/50 bg-[#1a1a24]'
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => document.getElementById('file-input').click()}
         >
           <input
-            id="fileInput"
+            id="file-input"
             type="file"
+            accept="image/jpeg,image/png"
             multiple
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={e => handleFiles(e.target.files)}
+            className="hidden"
+            onChange={handleFileSelect}
           />
-          {files.length === 0 ? (
-            <>
-              <div style={styles.uploadIcon}>↑</div>
-              <p style={styles.dropText}>Drop images here or click to browse</p>
-              <p style={styles.dropSub}>Max 5 images · JPG or PNG</p>
-            </>
-          ) : (
-            <div style={styles.fileList}>
-              {files.map((f, i) => (
-                <div key={i} style={styles.fileChip}>
-                  {f.name}
-                </div>
-              ))}
-              <p style={styles.dropSub}>{files.length}/5 images selected</p>
+          
+          <div className="flex flex-col items-center justify-center flex-1">
+            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors ${
+              isDragging ? 'bg-[#6c63ff]/20' : 'bg-[#27272a]'
+            }`}>
+              <UploadIcon className={`w-8 h-8 transition-colors ${isDragging ? 'text-[#6c63ff]' : 'text-[#71717a]'}`} />
             </div>
+
+            <div className="flex flex-col items-center mt-4">
+              <p className="text-base sm:text-lg font-medium mb-2">
+                {isDragging ? 'Drop your images here' : 'Drag and drop your images'}
+              </p>
+              <p className="text-[#71717a] text-sm mb-4">or click to browse</p>
+              <p className="text-[#71717a] text-xs">JPG or PNG, up to 5 images</p>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Error message */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-4 p-4 bg-[#ff6b6b]/10 border border-[#ff6b6b]/20 rounded-xl text-[#ff6b6b] text-sm text-center"
+            >
+              {error}
+            </motion.div>
           )}
-        </div>
+        </AnimatePresence>
+
+        {/* Selected files */}
+        <AnimatePresence>
+          {files.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-6"
+            >
+              <div className="flex flex-wrap gap-3 sm:gap-4">
+                {files.map((file, index) => (
+                  <motion.div
+                    key={`${file.name}-${index}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="min-w-0 flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-[#1a1a24] border border-[#2a2a38] rounded-xl"
+                  >
+                    <Image className="w-4 h-4 text-[#6c63ff]" />
+                    <span className="text-sm truncate max-w-[120px] sm:max-w-[170px]">{file.name}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeFile(index)
+                      }}
+                      className="w-5 h-5 rounded-full bg-[#27272a] hover:bg-[#ff6b6b]/20 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-3 h-3 text-[#71717a] hover:text-[#ff6b6b]" />
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Mode selector */}
-        <div style={styles.modeSection}>
-          <p style={styles.modeLabel}>Protection mode</p>
-          <div style={styles.modeGrid}>
-            {MODES.map(m => (
-              <div
-                key={m.id}
-                style={{ ...styles.modeCard, ...(mode === m.id ? styles.modeCardActive : {}) }}
-                onClick={() => setMode(m.id)}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="mt-10"
+        >
+          <h2 className="text-lg font-semibold mb-4">Select protection mode</h2>
+          <div className="grid md:grid-cols-3 gap-4 sm:gap-5">
+            {modes.map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setSelectedMode(mode.id)}
+                className={`relative min-h-[220px] p-5 sm:p-6 pt-[1cm] sm:pt-[1cm] rounded-xl text-center transition-all flex flex-col ${
+                  selectedMode === mode.id
+                    ? 'bg-[#1a1a24] border-2'
+                    : 'bg-[#1a1a24] border border-[#2a2a38] hover:border-[#6c63ff]/30'
+                }`}
+                style={{
+                  borderColor: selectedMode === mode.id ? mode.color : undefined
+                }}
               >
-                <div style={styles.modeName}>{m.label}</div>
-                <div style={styles.modeDesc}>{m.desc}</div>
-              </div>
+                {mode.popular && (
+                  <div className="absolute -top-2 right-4 px-2 py-0.5 bg-[#6c63ff] text-white text-xs font-medium rounded-full">
+                    Popular
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between mb-4 pt-[0.5cm] px-5">
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center p-[0.5cm]"
+                    style={{ backgroundColor: `${mode.color}15`, marginLeft: '0px' }}
+                  >
+                    <mode.icon className="w-5 h-5" style={{ color: mode.color }} />
+                  </div>
+                  
+                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors pt-2 ${
+                    selectedMode === mode.id ? 'border-transparent' : 'border-[#2a2a38]'
+                  }`} style={{ backgroundColor: selectedMode === mode.id ? mode.color : 'transparent', marginRight: '0px' }}>
+                    {selectedMode === mode.id && <Check className="w-3 h-3 text-white" />}
+                  </div>
+                </div>
+                
+                <h3 className="font-semibold mb-1 break-words">{mode.name}</h3>
+                <p className="text-xl font-bold mb-2" style={{ color: mode.color }}>{mode.time}</p>
+                <p className="text-[#71717a] text-sm">{mode.description}</p>
+                <p className="text-[#a1a1aa] text-sm mt-1">{mode.detail}</p>
+              </button>
             ))}
           </div>
-        </div>
+        </motion.div>
 
-        {error && <div style={styles.error}>{error}</div>}
-
-        <button
-          style={{ ...styles.btn, ...(loading ? styles.btnDisabled : {}) }}
-          onClick={handleSubmit}
-          disabled={loading || files.length === 0}
+        {/* Submit button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mt-10"
         >
-          {loading ? 'Submitting...' : `Cloak ${files.length || ''} image${files.length !== 1 ? 's' : ''}`}
-        </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading || files.length === 0}
+            className="max-w-md mx-auto p-[0.5cm] mb-[0.5cm] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xl font-medium rounded-xl transition-all flex items-center justify-center gap-3"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                Start protection
+                <span className="text-base opacity-80">({files.length} image{files.length !== 1 ? 's' : ''})</span>
+              </>
+            )}
+          </button>
+        </motion.div>
       </div>
     </div>
   )
 }
 
-const styles = {
-  page:       { minHeight: '100vh', background: '#0f0f13', padding: '40px 20px' },
-  container:  { maxWidth: '600px', margin: '0 auto' },
-  title:      { color: '#fff', fontSize: '32px', marginBottom: '8px' },
-  sub:        { color: '#888', marginBottom: '32px' },
-  dropzone:   { border: '2px dashed #2a2a38', borderRadius: '12px', padding: '48px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s', marginBottom: '28px' },
-  dropzoneActive: { borderColor: '#6c63ff', background: 'rgba(108,99,255,0.05)' },
-  uploadIcon: { fontSize: '36px', color: '#6c63ff', marginBottom: '12px' },
-  dropText:   { color: '#fff', fontSize: '16px', marginBottom: '6px' },
-  dropSub:    { color: '#666', fontSize: '13px' },
-  fileList:   { display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' },
-  fileChip:   { background: '#2a2a38', color: '#a0a0c0', padding: '6px 12px', borderRadius: '20px', fontSize: '13px' },
-  modeSection:{ marginBottom: '28px' },
-  modeLabel:  { color: '#888', fontSize: '13px', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.08em' },
-  modeGrid:   { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' },
-  modeCard:   { background: '#1a1a24', border: '1px solid #2a2a38', borderRadius: '10px', padding: '16px', cursor: 'pointer', transition: 'all 0.2s' },
-  modeCardActive: { borderColor: '#6c63ff', background: 'rgba(108,99,255,0.1)' },
-  modeName:   { color: '#fff', fontSize: '15px', fontWeight: '600', marginBottom: '4px' },
-  modeDesc:   { color: '#666', fontSize: '12px' },
-  error:      { background: '#2d1515', color: '#ff6b6b', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '14px' },
-  btn:        { width: '100%', padding: '14px', background: '#6c63ff', color: '#fff', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '600', cursor: 'pointer' },
-  btnDisabled:{ opacity: 0.5, cursor: 'not-allowed' },
-}
+export default Upload
